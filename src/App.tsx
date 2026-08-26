@@ -315,7 +315,7 @@ function ProjectPage({ onNavigate }: { onNavigate: (p: Page) => void }) {
         </h1>
         <div className="font-serif text-[0.85rem] leading-[2] text-white/55 flex flex-col gap-4 border-t border-white/10 pt-8">
           <p>
-            〈Field research on love〉는사단법인 유쾌한반란챠챠챠 6기의 지원을 받아 사랑을 연구하는윤현지의 개인 프로젝트입니다.
+            〈Field research on love〉는 사단법인 유쾌한반란 챠챠챠 6기의 지원을 받아 사랑을 연구하는 윤현지의 개인 프로젝트입니다.
           </p>
           <p>
             사랑하고 사랑 받는 일은 무엇일까요?<br />
