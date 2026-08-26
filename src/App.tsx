@@ -10,7 +10,6 @@ import illust3 from "@/imports/KakaoTalk_20260825_012754611_-______5_.png";
 import illust4 from "@/imports/KakaoTalk_20260825_012754611_-______6_.png";
 import illust5 from "@/imports/KakaoTalk_20260825_012754611_-____.png";
 import illust6 from "@/imports/KakaoTalk_20260825_012754611-1.png";
-import posterFlowers from "@/imports/KakaoTalk_20260825_012754611.png";
 import posterPerformance from "@/imports/KakaoTalk_20260825_013403723_06.png";
 import posterWho from "@/imports/KakaoTalk_20260825_013403723_07.png";
 
@@ -188,19 +187,8 @@ function HomePage({ onNavigate }: { onNavigate: (p: Page) => void }) {
             우리는 왜 사랑이 어려울까요?
           </h2>
           <div className="font-serif text-[0.88rem] leading-[2] text-black/65 flex flex-col gap-4">
-            <p>
-              우리는 종종 '사랑하는' 것은 쉬운 일이고,
-              사랑할 대상 또는 사랑받을 올바른 대상을 발견하기가 어려울 뿐이라고 오해합니다.
-            </p>
-            <p>
-              야외 인터뷰에서도 많은 사람이 사랑에 대해 쉽게 정의하고 설명할 수 있었어요.
-            </p>
-            <p className="italic text-black/40 text-[0.82rem]">
-              사랑은 좋아하는 마음, 무한한 이해, 책임, 있는 그대로 보는 것, 먼저 사랑하는 것.
-            </p>
-            <p>
-              다들 쉽게 이야기하지만, 저는 정작 어떻게 사랑을 '행동'하는지 모르고 있어요.
-            </p>
+            <p>사랑을 이야기하다 보면 나의 역사, 결핍, 무의식 ... '나 자신'을 만나게 됩니다.</p>
+            <p>사랑이 어려운 이유는 우리도 자기 자신을 잘 모르기 때문이에요.</p>
           </div>
         </div>
         <ArrowLink onClick={() => onNavigate("project")}>프로젝트 이야기 읽기 →</ArrowLink>
@@ -524,7 +512,7 @@ function ProgramPage({ onNavigate }: { onNavigate: (p: Page) => void }) {
         </p>
         <p className="font-serif text-[0.85rem] leading-[1.9] text-white/50">
           사랑을 어렵게 했던 나의 역사와 무의식을 만나고,
-          사랑의 정의와 구체적인 행동을 함께 찾아가는4주간의 화요 사랑 연구회.
+          사랑의 정의와 구체적인 행동을 함께 찾아가는 4주간의 화요 사랑 연구회.
         </p>
       </section>
 
@@ -533,22 +521,22 @@ function ProgramPage({ onNavigate }: { onNavigate: (p: Page) => void }) {
         <div className="grid grid-cols-2 gap-3 mb-3">
           <ProgramCard num="1" date="9/15" title={"첫 번째 모임,\n관찰 연습"}>
             <p className="text-center leading-[1.8]">
-              저는 상대의 몇 단서만으로도 순식간에 라벨을 붙이고멋대로 대상화하는나쁜 버릇이 있어요.
+              저는 상대의 몇 단서만으로도 순식간에 라벨을 붙이고 멋대로 대상화하는 나쁜 버릇이 있어요.
             </p>
             <p className="font-medium text-white text-center leading-[1.5] text-[0.7rem]">
               나는 상대를 보고 있을까, 자신의 상상을 보고 있을까?
             </p>
             <p className="text-white/35 text-[0.62rem] leading-[1.8] text-center">
-              첫인상 → 관찰 → 해석 →규정 → 검증
+              첫인상 → 관찰 → 해석 → 규정 → 검증
             </p>
           </ProgramCard>
 
           <ProgramCard num="2" date="9/22" title={"두 번째 모임,\n〈사랑의 기술〉 북토크"}>
             <p className="font-medium text-white text-center leading-[1.5] text-[0.7rem]">
-              사랑은 받는 것일까,하는 것일까?
+              사랑은 받는 것일까, 하는 것일까?
             </p>
             <p className="text-center leading-[1.8]">
-              에리히 프롬의 책을 읽고관심, 책임, 존중, 이해가구체적으로 어떤 행동인지이야기합니다.
+              에리히 프롬의 책을 읽고 관심, 책임, 존중, 이해가 구체적으로 어떤 행동인지 이야기합니다.
             </p>
             <div className="border border-white/30 px-2 py-1.5 text-center text-[0.62rem] leading-[1.6]">
               1인 1권,<br />《사랑의 기술》 도서 제공
@@ -557,19 +545,19 @@ function ProgramPage({ onNavigate }: { onNavigate: (p: Page) => void }) {
 
           <ProgramCard num="3" date="9/29" title={"세 번째 모임,\n〈왜 나는 너를 사랑하는가〉 북토크"}>
             <p className="text-center leading-[1.8]">
-              우리는 왜 특정한 사람을사랑할까요?사랑 속의 이상화, 기대,투사와 오해에 대해이야기합니다.
+              우리는 왜 특정한 사람을 사랑할까요? 사랑 속의 이상화, 기대, 투사와 오해에 대해 이야기합니다.
             </p>
             <div className="border border-white/30 px-2 py-1.5 text-center text-[0.62rem] leading-[1.6]">
-              1인 1권, 도서제공<br />《왜 나는 너를 사랑하는가》
+              1인 1권, 도서 제공<br />《왜 나는 너를 사랑하는가》
             </div>
           </ProgramCard>
 
           <ProgramCard num="4" date="10/6" title={"네 번째 모임,\n각자의 사랑"} minHeight={332}>
             <p className="text-center leading-[1.8]">
-              각자의 사랑을 적확하게설명하는 작품을 가져옵니다. 서로의 경험을 이야기하고,'사랑 행동' 문장을 수집합니다.
+              각자의 사랑을 적확하게 설명하는 작품을 가져옵니다. 서로의 경험을 이야기하고, '사랑 행동' 문장을 수집합니다.
             </p>
             <p className="text-center leading-[1.8]">
-              이 문장을 모아<strong className="text-white">'사랑행동'</strong>책을 만들어요.
+              이 문장을 모아 <strong className="text-white">'사랑행동'</strong> 책을 만들어요.
             </p>
           </ProgramCard>
         </div>
@@ -747,7 +735,7 @@ function ApplicationPage({ onComplete }: { onComplete: () => void }) {
               매주 화요일의<br />사랑연구회 참여 신청
             </h1>
             <p className="font-serif text-[0.85rem] leading-[2] text-black/60">
-              사랑을 어렵게 했던 나의 역사와 무의식을 만나고,사랑의 정의와 구체적인 행동을 함께 찾아가는 4주간의 화요 사랑 연구회입니다.
+              사랑을 어렵게 했던 나의 역사와 무의식을 만나고, 사랑의 정의와 구체적인 행동을 함께 찾아가는 4주간의 화요 사랑 연구회입니다.
             </p>
             <div className="border-t border-black/8 pt-5 font-sans text-[0.75rem] leading-[2.2] text-black/35">
               <p>09.15 — 10.06</p>
@@ -1074,17 +1062,8 @@ function ArchivePage() {
           거리에서<br />수집한 사랑들
         </h1>
         <p className="font-serif text-[0.85rem] leading-[1.9] text-white/45">
-          야외 인터뷰를 통해다양한 사람들이 말하는 사랑을 수집해왔습니다.사진, 영상, 목소리와 문장으로 남은 각자의 사랑을이곳에서 만나보세요.
+          야외 인터뷰를 통해 다양한 사람들이 말하는 사랑을 수집해왔습니다. 사진, 영상, 목소리와 문장으로 남은 각자의 사랑을 이곳에서 만나보세요.
         </p>
-      </section>
-
-      {/* Flowers image */}
-      <section className="bg-white">
-        <img
-          src={posterFlowers}
-          alt="사랑연구 모티프 — 다양한 꽃/태양 형태의 일러스트레이션"
-          className="w-full"
-        />
       </section>
 
       <section className="bg-white px-5 py-10 flex flex-col gap-8">
