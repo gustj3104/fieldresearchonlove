@@ -707,7 +707,7 @@ function ApplicationPage({ onComplete }: { onComplete: () => void }) {
   return (
     <div className="page-transition bg-white min-h-screen">
       {/* Progress bar */}
-      <div className="sticky top-[45px] z-30 bg-white border-b border-black/8 px-5 py-3 flex items-center justify-between">
+      <div className="fixed top-11 left-0 right-0 z-30 max-w-[440px] mx-auto bg-white border-b border-black/8 px-5 py-3 flex items-center justify-between">
         <div className="flex items-center gap-3">
           {section > 0 && (
             <button
@@ -728,7 +728,7 @@ function ApplicationPage({ onComplete }: { onComplete: () => void }) {
         </div>
       </div>
 
-      <div className="px-5 pt-8 pb-28">
+      <div className="px-5 pt-[115px] pb-28">
         {section === 0 && (
           <div className="flex flex-col gap-8">
             <h1 className="font-sans font-black text-[1.8rem] leading-[1.2] tracking-[0.03em] text-black">
