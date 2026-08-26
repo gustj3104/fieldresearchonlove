@@ -187,7 +187,7 @@ function HomePage({ onNavigate }: { onNavigate: (p: Page) => void }) {
             우리는 왜 사랑이 어려울까요?
           </h2>
           <div className="font-serif text-[0.88rem] leading-[2] text-black/65 flex flex-col gap-4">
-            <p>사랑을 이야기하다 보면 나의 역사, 결핍, 무의식 ... '나 자신'을 만나게 됩니다.</p>
+            <p>사랑을 이야기하다 보면 나의 역사, 결핍, 무의식 ... <span className="whitespace-nowrap">'나 자신'을</span> 만나게 됩니다.</p>
             <p>사랑이 어려운 이유는 우리도 자기 자신을 잘 모르기 때문이에요.</p>
           </div>
         </div>
