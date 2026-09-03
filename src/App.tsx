@@ -677,16 +677,33 @@ function ApplicationPage({ onComplete }: { onComplete: () => void }) {
   async function submitApplication() {
     setSubmitting(true);
     setSubmitError(null);
-    try {
+    async function attempt() {
       const res = await fetch("/api/apply", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),
       });
-      if (!res.ok) throw new Error();
+      if (!res.ok) {
+        const body = await res.json().catch(() => null);
+        throw new Error(body?.error || `요청 실패 (${res.status})`);
+      }
+    }
+
+    try {
+      try {
+        await attempt();
+      } catch (firstError) {
+        console.warn("신청서 제출 1차 시도 실패, 재시도합니다:", firstError);
+        await new Promise((r) => setTimeout(r, 1000));
+        await attempt();
+      }
       onComplete();
-    } catch {
-      setSubmitError("신청서 제출에 실패했습니다. 잠시 후 다시 시도해주세요.");
+    } catch (err) {
+      console.error("신청서 제출 실패:", err);
+      const detail = err instanceof Error ? err.message : "";
+      setSubmitError(
+        `신청서 제출에 실패했습니다. 잠시 후 다시 시도해주세요.${detail ? ` (${detail})` : ""}`
+      );
     } finally {
       setSubmitting(false);
     }
