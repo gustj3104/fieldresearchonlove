@@ -106,7 +106,15 @@ export default async function handler(req: Req, res: Res) {
   if (!response.ok) {
     const detail = await response.text();
     console.error("Notion API error:", response.status, detail);
-    res.status(502).json({ error: "Failed to save application. Please try again." });
+    let notionMessage = "";
+    try {
+      notionMessage = JSON.parse(detail)?.message ?? "";
+    } catch {
+      // ignore parse failure, fall back to generic message
+    }
+    res.status(502).json({
+      error: `Failed to save application to Notion (${response.status})${notionMessage ? `: ${notionMessage}` : ""}`,
+    });
     return;
   }
 
