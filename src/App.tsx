@@ -15,6 +15,9 @@ import posterWho from "@/imports/KakaoTalk_20260825_013403723_07.png";
 
 type Page = "landing" | "home" | "project" | "program" | "application" | "complete" | "archive";
 
+// Set to true to reopen applications.
+const APPLICATIONS_OPEN = false;
+
 // ─── Shared ───────────────────────────────────────────────────────────────────
 
 function Label({ text, invert = false }: { text: string; invert?: boolean }) {
@@ -63,7 +66,7 @@ function FullscreenMenu({ onNavigate, onClose }: { onNavigate: (p: Page) => void
     { label: "PROJECT", page: "project" },
     { label: "PROGRAM", page: "program" },
     { label: "ARCHIVE", page: "archive" },
-    { label: "APPLY", page: "application" },
+    ...(APPLICATIONS_OPEN ? [{ label: "APPLY", page: "application" as const }] : []),
   ];
   return (
     <div className="fixed inset-0 z-50 bg-black flex flex-col page-transition max-w-[440px] mx-auto">
@@ -117,11 +120,12 @@ function BlackCTA({ children, onClick, disabled = false }: { children: React.Rea
   );
 }
 
-function WhiteCTA({ children, onClick }: { children: React.ReactNode; onClick: () => void }) {
+function WhiteCTA({ children, onClick, disabled = false }: { children: React.ReactNode; onClick: () => void; disabled?: boolean }) {
   return (
     <button
       onClick={onClick}
-      className="w-full py-5 bg-white text-black font-sans text-[11px] tracking-[0.2em] uppercase hover:bg-[#F2F2F2] transition-colors border border-black"
+      disabled={disabled}
+      className="w-full py-5 bg-white text-black font-sans text-[11px] tracking-[0.2em] uppercase hover:bg-[#F2F2F2] disabled:opacity-25 transition-colors border border-black"
     >
       {children}
     </button>
@@ -253,7 +257,11 @@ function HomePage({ onNavigate }: { onNavigate: (p: Page) => void }) {
             <p>참가비 10,000원</p>
           </div>
         </div>
-        <BlackCTA onClick={() => onNavigate("application")}>참여 신청하기</BlackCTA>
+        {APPLICATIONS_OPEN ? (
+          <BlackCTA onClick={() => onNavigate("application")}>참여 신청하기</BlackCTA>
+        ) : (
+          <BlackCTA onClick={() => {}} disabled>모집이 마감되었습니다</BlackCTA>
+        )}
       </section>
 
       {/* ARCHIVE PREVIEW */}
@@ -461,12 +469,18 @@ function ProjectPage({ onNavigate }: { onNavigate: (p: Page) => void }) {
           </h2>
         </div>
         <div className="border-t border-white/10 pt-8">
-          <button
-            onClick={() => onNavigate("application")}
-            className="font-sans text-[11px] tracking-[0.08em] text-white/60 hover:text-white transition-colors text-left font-bold"
-          >
-            참여 신청하기 →
-          </button>
+          {APPLICATIONS_OPEN ? (
+            <button
+              onClick={() => onNavigate("application")}
+              className="font-sans text-[11px] tracking-[0.08em] text-white/60 hover:text-white transition-colors text-left font-bold"
+            >
+              참여 신청하기 →
+            </button>
+          ) : (
+            <p className="font-sans text-[11px] tracking-[0.08em] text-white/30 text-left font-bold">
+              모집이 마감되었습니다
+            </p>
+          )}
         </div>
       </section>
 
@@ -585,7 +599,11 @@ function ProgramPage({ onNavigate }: { onNavigate: (p: Page) => void }) {
         <p className="font-sans text-[8px] tracking-[0.25em] text-white/20 uppercase">
           Four Tuesdays for Love &amp; Interactive Performance
         </p>
-        <WhiteCTA onClick={() => onNavigate("application")}>참여 신청하기</WhiteCTA>
+        {APPLICATIONS_OPEN ? (
+          <WhiteCTA onClick={() => onNavigate("application")}>참여 신청하기</WhiteCTA>
+        ) : (
+          <WhiteCTA onClick={() => {}} disabled>모집이 마감되었습니다</WhiteCTA>
+        )}
       </section>
 
       <Footer />
@@ -1043,6 +1061,27 @@ function RadioItem({ name, value, checked, onChange, label }: {
   );
 }
 
+// ─── Application Closed ─────────────────────────────────────────────────────────
+
+function ApplicationClosedPage({ onNavigate }: { onNavigate: (p: Page) => void }) {
+  return (
+    <div className="page-transition bg-black min-h-screen px-5 pt-24 pb-20 flex flex-col justify-between">
+      <div className="flex flex-col gap-10 pt-8">
+        <Label text="Application Closed" invert />
+        <h1 className="font-sans font-black text-[2.4rem] leading-[1.1] tracking-[0.04em] text-white">
+          모집이<br />마감되었습니다.
+        </h1>
+        <p className="font-serif text-[0.88rem] leading-[2] text-white/50 border-t border-white/10 pt-8">
+          매주 화요일의 사랑연구회에 관심 가져주셔서 감사합니다.
+        </p>
+      </div>
+      <div className="border-t border-white/10 pt-8">
+        <ArrowLink onClick={() => onNavigate("home")} invert>HOME으로 돌아가기 →</ArrowLink>
+      </div>
+    </div>
+  );
+}
+
 // ─── Complete ─────────────────────────────────────────────────────────────────
 
 function CompletePage({ onNavigate }: { onNavigate: (p: Page) => void }) {
@@ -1148,7 +1187,13 @@ export default function App() {
           {page === "home" && <HomePage onNavigate={navigate} />}
           {page === "project" && <ProjectPage onNavigate={navigate} />}
           {page === "program" && <ProgramPage onNavigate={navigate} />}
-          {page === "application" && <ApplicationPage onComplete={() => navigate("complete")} />}
+          {page === "application" && (
+            APPLICATIONS_OPEN ? (
+              <ApplicationPage onComplete={() => navigate("complete")} />
+            ) : (
+              <ApplicationClosedPage onNavigate={navigate} />
+            )
+          )}
           {page === "complete" && <CompletePage onNavigate={navigate} />}
           {page === "archive" && <ArchivePage />}
         </main>
