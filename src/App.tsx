@@ -250,6 +250,27 @@ function HomePage({ onNavigate }: { onNavigate: (p: Page) => void }) {
         />
       </section>
 
+      {/* BODY PERFORMANCE CTA */}
+      <section className="bg-white px-5 py-16 flex flex-col gap-8 border-t border-black/8">
+        <div className="flex flex-col gap-4">
+          <Label text="Five Tuesdays for Love" />
+          <h2 className="font-sans font-black text-[1.6rem] leading-[1.15] tracking-[0.03em] text-black">
+            5회차, 인터랙티브<br />퍼포먼스 〈몸〉
+          </h2>
+          <div className="font-sans text-[0.78rem] leading-[2.2] text-black/40">
+            <p>10.09 (금) 15:00 — 18:00</p>
+            <p>서울대입구역 아시티스</p>
+            <p>기존 연구회 참여자 외 10명 추가 모집</p>
+            <p>참가비 10,000원 (기존 참여자 면제)</p>
+          </div>
+        </div>
+        {BODY_APPLICATIONS_OPEN ? (
+          <BlackCTA onClick={() => onNavigate("bodyApplication")}>〈몸〉 참여 신청하기</BlackCTA>
+        ) : (
+          <BlackCTA onClick={() => {}} disabled>모집이 마감되었습니다</BlackCTA>
+        )}
+      </section>
+
       {/* APPLICATION CTA */}
       <section className="bg-white px-5 py-16 flex flex-col gap-8">
         <div className="flex flex-col gap-4">
