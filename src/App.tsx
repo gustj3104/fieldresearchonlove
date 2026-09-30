@@ -13,10 +13,12 @@ import illust6 from "@/imports/KakaoTalk_20260825_012754611-1.png";
 import posterPerformance from "@/imports/KakaoTalk_20260825_013403723_06.png";
 import posterWho from "@/imports/KakaoTalk_20260825_013403723_07.png";
 
-type Page = "landing" | "home" | "project" | "program" | "application" | "complete" | "archive";
+type Page = "landing" | "home" | "project" | "program" | "application" | "complete" | "archive" | "bodyApplication" | "bodyComplete";
 
-// Set to true to reopen applications.
+// Set to true to reopen the 4-session research group applications.
 const APPLICATIONS_OPEN = false;
+// Set to true to reopen 〈몸〉 performance applications.
+const BODY_APPLICATIONS_OPEN = true;
 
 // ─── Shared ───────────────────────────────────────────────────────────────────
 
@@ -67,6 +69,7 @@ function FullscreenMenu({ onNavigate, onClose }: { onNavigate: (p: Page) => void
     { label: "PROGRAM", page: "program" },
     { label: "ARCHIVE", page: "archive" },
     ...(APPLICATIONS_OPEN ? [{ label: "APPLY", page: "application" as const }] : []),
+    ...(BODY_APPLICATIONS_OPEN ? [{ label: "APPLY 〈몸〉", page: "bodyApplication" as const }] : []),
   ];
   return (
     <div className="fixed inset-0 z-50 bg-black flex flex-col page-transition max-w-[440px] mx-auto">
@@ -582,12 +585,15 @@ function ProgramPage({ onNavigate }: { onNavigate: (p: Page) => void }) {
       </section>
 
       {/* Interactive Performance — poster */}
-      <section className="bg-black px-4 pb-8">
+      <section className="bg-black px-4 pb-8 flex flex-col gap-4">
         <img
           src={posterPerformance}
           alt="10/9 인터랙티브 퍼포먼스 〈몸〉"
           className="w-full border border-white/8"
         />
+        {BODY_APPLICATIONS_OPEN && (
+          <WhiteCTA onClick={() => onNavigate("bodyApplication")}>〈몸〉 참여 신청하기</WhiteCTA>
+        )}
       </section>
 
       {/* Additional note + CTA */}
@@ -1107,6 +1113,236 @@ function CompletePage({ onNavigate }: { onNavigate: (p: Page) => void }) {
   );
 }
 
+// ─── Body Performance Application ───────────────────────────────────────────
+
+type BodyFormData = {
+  displayName: string;
+  phone: string;
+  instagram: string;
+  participantType: "" | "existing" | "new";
+  feeAgreement: boolean;
+  mediaConsent: "" | "agree" | "private";
+  privacyAgreement: boolean;
+  motivation: string;
+};
+
+const initialBodyForm: BodyFormData = {
+  displayName: "", phone: "", instagram: "",
+  participantType: "", feeAgreement: false, mediaConsent: "",
+  privacyAgreement: false, motivation: "",
+};
+
+function BodyApplicationPage({ onComplete }: { onComplete: () => void }) {
+  const [form, setForm] = useState<BodyFormData>(initialBodyForm);
+  const [errors, setErrors] = useState<Partial<Record<keyof BodyFormData, string>>>({});
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
+  function setField<K extends keyof BodyFormData>(key: K, value: BodyFormData[K]) {
+    setForm((f) => ({ ...f, [key]: value }));
+    setErrors((e) => ({ ...e, [key]: undefined }));
+  }
+
+  function validate(): boolean {
+    const errs: typeof errors = {};
+    if (!form.displayName.trim()) errs.displayName = "필수 항목입니다.";
+    if (!form.phone.trim()) errs.phone = "필수 항목입니다.";
+    if (!form.participantType) errs.participantType = "필수 항목입니다.";
+    if (form.participantType === "new" && !form.feeAgreement) errs.feeAgreement = "필수 항목입니다.";
+    if (!form.mediaConsent) errs.mediaConsent = "필수 항목입니다.";
+    if (!form.privacyAgreement) errs.privacyAgreement = "필수 항목입니다.";
+    setErrors(errs);
+    return Object.keys(errs).length === 0;
+  }
+
+  async function submitApplication() {
+    setSubmitting(true);
+    setSubmitError(null);
+
+    async function attempt() {
+      const res = await fetch("/api/apply-body", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => null);
+        throw new Error(body?.error || `요청 실패 (${res.status})`);
+      }
+    }
+
+    try {
+      try {
+        await attempt();
+      } catch (firstError) {
+        console.warn("신청서 제출 1차 시도 실패, 재시도합니다:", firstError);
+        await new Promise((r) => setTimeout(r, 1000));
+        await attempt();
+      }
+      onComplete();
+    } catch (err) {
+      console.error("신청서 제출 실패:", err);
+      const detail = err instanceof Error ? err.message : "";
+      setSubmitError(
+        `신청서 제출에 실패했습니다. 잠시 후 다시 시도해주세요.${detail ? ` (${detail})` : ""}`
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  function handleSubmit() {
+    if (validate()) submitApplication();
+  }
+
+  return (
+    <div className="page-transition bg-white min-h-screen">
+      <div className="px-5 pt-24 pb-28 flex flex-col gap-10">
+        <div className="flex flex-col gap-6">
+          <Label text="Interactive Performance" />
+          <h1 className="font-sans font-black text-[2rem] leading-[1.15] tracking-[0.03em] text-black">
+            인터랙티브 퍼포먼스<br />〈몸〉 참여 신청
+          </h1>
+          <div className="border-t border-black/8 pt-5 font-sans text-[0.75rem] leading-[2.2] text-black/35">
+            <p>2026.10.09 (금) 15:00 — 18:00</p>
+            <p>서울대입구역 아시티스</p>
+            <p>서울 관악구 쑥고개로 122 대원빌딩 지하1층</p>
+            <p>참가비 10,000원 (기존 연구회 참여자 면제)</p>
+          </div>
+          <div className="font-serif text-[0.78rem] leading-[1.9] text-black/50 flex flex-col gap-1.5">
+            <p>· 2시 40분부터 공간 내 입장이 가능합니다.</p>
+            <p>· 기존 사랑연구회 참여자 외 10명을 추가로 모집합니다.</p>
+            <p>· 드로잉 도구와 종이, 와인과 다과가 마련되어 있습니다.</p>
+            <p>· 세션 전 과정은 영상과 사진으로 촬영됩니다.</p>
+            <p className="font-medium text-black/70">· 그림 실력은 전혀 중요하지 않습니다.</p>
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-10">
+          <Field label="1. 이름 / 활동명" error={errors.displayName}>
+            <AppInput value={form.displayName} onChange={(v) => setField("displayName", v)} placeholder="이름 또는 활동명" />
+          </Field>
+          <Field label="2. 연락처" error={errors.phone}>
+            <AppInput type="tel" value={form.phone} onChange={(v) => setField("phone", v)} placeholder="010-0000-0000" />
+          </Field>
+          <Field label="3. 인스타그램 ID" optional>
+            <AppInput value={form.instagram} onChange={(v) => setField("instagram", v)} placeholder="@________" />
+          </Field>
+
+          <Field label="4. 참여 구분을 선택해주세요." error={errors.participantType}>
+            <div className="border-t border-black/8">
+              <RadioItem
+                name="participantType"
+                value="existing"
+                checked={form.participantType === "existing"}
+                onChange={() => setField("participantType", "existing")}
+                label="기존 사랑연구회 참여자입니다. (참가비 면제)"
+              />
+              <RadioItem
+                name="participantType"
+                value="new"
+                checked={form.participantType === "new"}
+                onChange={() => setField("participantType", "new")}
+                label="신규 참여자입니다."
+              />
+            </div>
+          </Field>
+
+          {form.participantType === "new" && (
+            <div className="border border-black/10 p-5 flex flex-col gap-4">
+              <p className="font-sans font-black text-[1.1rem] tracking-[0.03em] text-black">참가비 10,000원</p>
+              <p className="font-serif text-[0.8rem] leading-[1.85] text-black/50">노쇼 방지를 위한 참가비입니다.</p>
+              <div className="border-t border-black/8">
+                <CheckItem
+                  checked={form.feeAgreement}
+                  onChange={(v) => setField("feeAgreement", v)}
+                  label="참가비 발생에 동의합니다."
+                  error={errors.feeAgreement}
+                />
+              </div>
+            </div>
+          )}
+
+          <Field label="5. 얼굴 노출 및 촬영 안내" error={errors.mediaConsent}>
+            <p className="font-serif text-[0.78rem] leading-[1.9] text-black/55 mb-4">
+              세션 전 과정은 영상과 사진으로 촬영되며, 일부는 인스타그램 등 SNS 채널에 게시될 수 있습니다.
+            </p>
+            <div className="border-t border-black/8">
+              <RadioItem
+                name="mediaConsent"
+                value="agree"
+                checked={form.mediaConsent === "agree"}
+                onChange={() => setField("mediaConsent", "agree")}
+                label="얼굴 노출 및 SNS 활용에 동의합니다."
+              />
+              <RadioItem
+                name="mediaConsent"
+                value="private"
+                checked={form.mediaConsent === "private"}
+                onChange={() => setField("mediaConsent", "private")}
+                label="얼굴 노출을 원하지 않습니다. (비공개 요청)"
+              />
+            </div>
+          </Field>
+
+          <div className="border-t border-black/8 pt-8 flex flex-col gap-4">
+            <SectionHead label="Privacy" title="개인정보 동의" />
+            <p className="font-serif text-[0.78rem] leading-[1.9] text-black/50">
+              프로그램 참여자 선정 및 운영을 위해 이름, 연락처, SNS 계정, 신청서 응답 내용을 수집·이용합니다.
+              보관 기간은 프로그램 종료 후 3개월 이내이며, 동의하지 않을 경우 프로그램 신청이 어렵습니다.
+            </p>
+            <div className="border-t border-black/8">
+              <CheckItem
+                checked={form.privacyAgreement}
+                onChange={(v) => setField("privacyAgreement", v)}
+                label="개인정보 수집 및 이용에 동의합니다."
+                error={errors.privacyAgreement}
+              />
+            </div>
+          </div>
+
+          <Field label="6. 운영진에게 미리 전하고 싶은 이야기" desc="신청 동기나 필요한 요청사항이 있다면 적어주세요." optional>
+            <AppTextarea value={form.motivation} onChange={(v) => setField("motivation", v)} />
+          </Field>
+        </div>
+      </div>
+
+      {/* Fixed bottom bar */}
+      <div className="fixed bottom-0 left-0 right-0 z-30 max-w-[440px] mx-auto bg-white border-t border-black/8 px-5 py-4">
+        {submitError && (
+          <p className="font-sans text-[10px] text-black/50 pb-2 text-center">{submitError}</p>
+        )}
+        <BlackCTA onClick={handleSubmit} disabled={submitting}>
+          {submitting ? "제출 중..." : "신청 제출하기"}
+        </BlackCTA>
+      </div>
+    </div>
+  );
+}
+
+function BodyCompletePage({ onNavigate }: { onNavigate: (p: Page) => void }) {
+  return (
+    <div className="page-transition bg-black min-h-screen px-5 pt-24 pb-20 flex flex-col justify-between">
+      <div className="flex flex-col gap-10 pt-8">
+        <Label text="Application Complete" invert />
+        <h1 className="font-sans font-black text-[2.8rem] leading-[1.05] tracking-[0.04em] text-white">
+          신청이<br />완료되었습니다.
+        </h1>
+        <div className="font-serif text-[0.88rem] leading-[2] text-white/50 flex flex-col gap-4 border-t border-white/10 pt-8">
+          <p>〈몸〉에 관심 가져주셔서 감사합니다.</p>
+          <p>
+            신청 내용을 확인한 후<br />
+            <span className="text-white/85 font-medium">개별적으로 연락드립니다.</span>
+          </p>
+        </div>
+      </div>
+      <div className="border-t border-white/10 pt-8">
+        <ArrowLink onClick={() => onNavigate("home")} invert>HOME으로 돌아가기 →</ArrowLink>
+      </div>
+    </div>
+  );
+}
+
 // ─── Archive ──────────────────────────────────────────────────────────────────
 
 function ArchivePage() {
@@ -1196,6 +1432,14 @@ export default function App() {
           )}
           {page === "complete" && <CompletePage onNavigate={navigate} />}
           {page === "archive" && <ArchivePage />}
+          {page === "bodyApplication" && (
+            BODY_APPLICATIONS_OPEN ? (
+              <BodyApplicationPage onComplete={() => navigate("bodyComplete")} />
+            ) : (
+              <ApplicationClosedPage onNavigate={navigate} />
+            )
+          )}
+          {page === "bodyComplete" && <BodyCompletePage onNavigate={navigate} />}
         </main>
       </div>
     </div>
