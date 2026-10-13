@@ -32,3 +32,7 @@ python3 verify.py               # 자동 검수
 - `..._trim-only.pdf` / `..._bleed3mm_with-marks.pdf` — 무도련 / 재단선 포함
 - `ACT-OF-LOVE_review-spreads_DRAFT.pdf` — 검토용 펼침면 (인쇄 불가)
 - `page-map.md|csv` 편집표, `line-review.csv` 문장 줄 수 검토, `prepress-checklist.md` 인쇄소 제출 전 확인
+
+## 표지 (별도 파일, 치수 미확정 시안)
+`python3 cover.py [--theme light|dark]` → `output/cover/` (뒷표지·책등·앞표지 한 장 전개도, 안내선이 있는 `_review_` 파일 별도).
+치수는 `data/cover.json` (책등 16mm 등은 가정값). 인쇄소의 A5(W148XH210) 표지 템플릿/사양이 확정되면 수정하세요.

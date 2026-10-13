@@ -1,0 +1,12 @@
+{
+  "_note": "치수는 태산인디고 W135XH195 템플릿 구조(패널=책+6mm, 가장자리 16mm 편집영역)를 A5에 적용한 가정값. 인쇄소 A5(W148XH210) 템플릿/사양 확정 후 수정.",
+  "dimensions_confirmed": false,
+  "panel_w_mm": 154,
+  "panel_h_mm": 216,
+  "spine_mm": 16,
+  "wrap_mm": 16,
+  "back_copy": [],
+  "back_copy_placeholder": "[뒷표지 문구 — 추후 전달]",
+  "barcode_box": true,
+  "front_byline": "엮은이  윤현지"
+}
