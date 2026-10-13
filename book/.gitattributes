@@ -1,0 +1,2 @@
+# 생성된 PDF는 소용량(~700KB)이라 LFS 대신 일반 파일로 저장
+*.pdf -filter -diff -merge binary

@@ -1,0 +1,4 @@
+reportlab>=4
+pikepdf
+pymupdf
+pillow
