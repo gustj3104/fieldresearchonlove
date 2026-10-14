@@ -57,10 +57,10 @@ def draw_cover(c, L, cfg, th, guides):
     c.setFont(FONT_REG, 8)
     c.drawCentredString(cx, top - mm(14), "챠챠챠 6기 · 매주 화요일의 사랑연구회")
     c.setFont(FONT_SEMI, 40)
-    c.drawCentredString(cx, L.y0 + L.ph / 2 + mm(6), "사랑 행동")
+    c.drawCentredString(cx, L.y0 + L.ph / 2 + mm(6), cfg["title_ko"])
     c.setLineWidth(0.5)
     c.line(cx - mm(6), L.y0 + L.ph / 2 - mm(4), cx + mm(6), L.y0 + L.ph / 2 - mm(4))
-    spacing_text(c, cx, L.y0 + L.ph / 2 - mm(14), "THE ACT OF LOVE", FONT_REG, 10.5, 3.2)
+    spacing_text(c, cx, L.y0 + L.ph / 2 - mm(14), cfg["title_en"], FONT_REG, 12, 1.0)
     c.setFont(FONT_REG, 10)
     c.drawCentredString(cx, L.y0 + OUT + mm(13), cfg["front_byline"])
 
@@ -96,9 +96,9 @@ def draw_cover(c, L, cfg, th, guides):
     c.rotate(-90)
     # 회전 좌표계: x = 위에서 아래로의 거리, y = 책등 폭 방향(오른쪽이 +)
     c.setFont(FONT_SEMI, 17)
-    c.drawString(margin, -0.35 * 17, "사랑 행동")
-    t_end = margin + text_w("사랑 행동", FONT_SEMI, 17)
-    spacing_text(c, t_end + mm(8), -0.35 * 7.5, "THE ACT OF LOVE", FONT_REG, 7.5, 2.2, align="left")
+    c.drawString(margin, -0.35 * 17, cfg["title_ko"])
+    t_end = margin + text_w(cfg["title_ko"], FONT_SEMI, 17)
+    spacing_text(c, t_end + mm(8), -0.35 * 7.5, cfg["title_en"], FONT_REG, 8, 0.8, align="left")
     by = "윤현지"
     c.setFont(FONT_REG, 9)
     c.drawString(L.ph - margin - text_w(by, FONT_REG, 9), -0.35 * 9, by)
@@ -151,6 +151,7 @@ def main():
             sys.exit("폰트가 없습니다. scripts/fetch_fonts.sh 를 먼저 실행하세요.")
         pdfmetrics.registerFont(TTFont(name, str(p)))
     cfg = json.load(open(ROOT / "data/cover.json", encoding="utf-8"))
+    cfg.update({k: v for k, v in json.load(open(ROOT / "data/book.json", encoding="utf-8")).items() if k in ("title_ko", "title_en")})
     L = Layout(cfg)
     th = THEMES[a.theme]
     out = ROOT / "output/cover"

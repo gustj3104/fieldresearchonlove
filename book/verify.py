@@ -127,7 +127,7 @@ labels = ["기획", "제작", "편집", "디자인", "프로젝트 운영", "이
 lines213 = [l.strip() for l in page_text[COL - 1].splitlines()]
 pos = [lines213.index(l) if l in lines213 else -1 for l in labels]
 check(all(p >= 0 for p in pos) and pos == sorted(pos), "판권 항목 7개가 지정 순서로 존재")
-check("THEACTOFLOVE" in norm(page_text[2]) and "엮은이윤현지" in norm(page_text[2]), "p.3 속표지: 제목·영문·엮은이")
+check(norm(data["title_ko"]) in norm(page_text[2]) and norm(data["title_en"]) in norm(page_text[2]) and "엮은이윤현지" in norm(page_text[2]), "p.3 속표지: 제목·영문·엮은이 (book.json 표기와 일치)")
 check("HOWTOUSETHISBOOK" in norm(page_text[4]) and "책사용법" in norm(page_text[4]), "p.5 사용법 오른쪽 페이지")
 # 서문·후기·감사 구간(p.6 ~ 사랑 행동 앞): 원고 원문·순서 일치
 sec_expect = ""

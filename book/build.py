@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""《사랑 행동 / THE ACT OF LOVE》 내지 PDF 빌더.
+"""《사랑행동 / Acts of Love》 내지 PDF 빌더.
 
 데이터: data/book.json (도입부·소개·판권), data/actions.csv (사랑 행동 100개), illustrations/NNN.png
 출력:   output/ (인쇄용 PDF 3종, 검토용 스프레드 PDF, 편집표, 줄 수 검토표)
@@ -351,7 +351,7 @@ def draw_page(c, spec, ctx):
     elif k == "title":
         c.setFont(FONT_SEMI, 30)
         c.drawCentredString(cx, mm(TRIM_H - 78), d["title_ko"])
-        spacing_text(c, cx, mm(TRIM_H - 92), d["title_en"], FONT_REG, 9, 2.6)
+        spacing_text(c, cx, mm(TRIM_H - 92), d["title_en"], FONT_REG, 11.5, 0.9)
         c.setFont(FONT_REG, 10.5)
         c.drawCentredString(cx, y0 + mm(8), f"엮은이  {d['editor']}")
     elif k == "howto":
@@ -465,7 +465,7 @@ def render_print(plan, ctx, out, bleed_mm, marks):
     off = mm(bleed_mm + slug)
     w, h = mm(TRIM_W + 2 * (bleed_mm + slug)), mm(TRIM_H + 2 * (bleed_mm + slug))
     c = canvas.Canvas(str(out), pagesize=(w, h), pageCompression=1, invariant=1, initialFontName=FONT_REG)
-    c.setTitle("사랑 행동 내지 (인쇄용 시안)")
+    c.setTitle("사랑행동 내지 (인쇄용 시안)")
     for spec in plan:
         c.saveState()
         c.translate(off, off)
@@ -497,7 +497,7 @@ def render_review(plan, ctx, out):
     side_m, top_m, bot_m = 8, 12, 14
     sw, sh = mm(2 * TRIM_W + 2 * side_m), mm(TRIM_H + top_m + bot_m)
     c = canvas.Canvas(str(out), pagesize=(sw, sh), pageCompression=1, invariant=1, initialFontName=FONT_REG)
-    c.setTitle("사랑 행동 내지 — 검토용 펼침면 (인쇄 불가)")
+    c.setTitle("사랑행동 내지 — 검토용 펼침면 (인쇄 불가)")
     by_page = {p["page"]: p for p in plan}
     rctx = Ctx(ctx.data, ctx.actions, ctx.font_pt)  # 에세이 흐름이 쪽 순서대로 소비되도록 하나만 사용
     last = len(plan)
@@ -586,7 +586,7 @@ def write_tables(plan, ctx, outdir, bleed_mm):
         w.writerow(hdr)
         w.writerows(rows)
     with open(outdir / "page-map.md", "w", encoding="utf-8") as f:
-        f.write("# 편집표 — 사랑 행동 / THE ACT OF LOVE 내지 (인쇄용 시안)\n\n")
+        f.write("# 편집표 — 사랑행동 / Acts of Love 내지 (인쇄용 시안)\n\n")
         f.write(f"- 총 {len(plan)}쪽 (4의 배수), A5 148×210mm, 인쇄용 PDF는 낱장 순서 (1쪽 = 오른쪽)\n")
         f.write("- 사랑 행동 N: 일러스트 = 왼쪽(짝수 쪽), 문장 = 오른쪽(홀수 쪽)\n\n")
         f.write("| " + " | ".join(hdr) + " |\n|" + "---|" * len(hdr) + "\n")
