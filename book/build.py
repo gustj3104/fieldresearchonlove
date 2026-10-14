@@ -269,9 +269,11 @@ def flow_page(story, frame, canv):
 def essay_story(sec):
     """문단(빈 줄 구분) → Paragraph. 문단 안의 줄바꿈은 그대로 유지, ***강조***는 SemiBold."""
     k = _k100()
-    st = ParagraphStyle("essay", fontName=FONT_REG, fontSize=9.5, leading=16.5, textColor=k, spaceAfter=7,
-                        allowWidows=0, allowOrphans=0)
-    note = ParagraphStyle("essay-note", parent=st, fontSize=8, leading=14, spaceBefore=22)
+    f = sec.get("scale", 1.0)  # 구간 전체 글자 크기 배율 (예: 0.7 = 30% 축소)
+    st = ParagraphStyle("essay", fontName=FONT_REG, fontSize=9.5 * f, leading=16.5 * f, textColor=k,
+                        spaceAfter=7 * f, allowWidows=0, allowOrphans=0)
+    note = ParagraphStyle("essay-note", parent=st, fontSize=8 * f, leading=14 * f, spaceBefore=22 * f,
+                          spaceAfter=0)
 
     maxw = mm(TRIM_W - M_INNER - M_OUTER)
 
@@ -279,8 +281,8 @@ def essay_story(sec):
         # 폭을 넘는 줄은 한 단어만 넘어가지 않도록 균형 있게 직접 나눈다.
         lines = []
         for ln in t.split("\n"):
-            if "***" not in ln and text_w(ln, FONT_REG, 9.5) > maxw:
-                bl = wrap_balanced(ln, FONT_REG, 9.5, maxw)
+            if "***" not in ln and text_w(ln, FONT_REG, 9.5 * f) > maxw:
+                bl = wrap_balanced(ln, FONT_REG, 9.5 * f, maxw)
                 lines += bl if len(bl) == 2 else [ln]  # 두 줄이면 균형 분할, 3줄 이상 산문은 자연스럽게 흘림
             else:
                 lines.append(ln)
@@ -292,11 +294,31 @@ def essay_story(sec):
              for p in sec["body"]]
     if sec.get("note"):
         story.append(Paragraph(markup(sec["note"]), note))
+    if sec.get("anchor"):  # 제목도 같은 흐름에 넣어 한 덩어리로 바닥 정렬
+        head = ParagraphStyle("essay-head", parent=st, fontName=FONT_SEMI, fontSize=15 * f, leading=22 * f,
+                              spaceAfter=34 * f)
+        story.insert(0, Paragraph(html.escape(sec["title"], quote=False), head))
     return story
+
+
+def draw_anchored(c, story, x0, y0, width):
+    """한 덩어리를 왼쪽 정렬로 쌓되 마지막 줄이 y0에 닿게 한다. 위치는 아래부터 계산하고,
+    그리기는 위에서 아래(읽는 순서)로 해서 PDF 텍스트 순서를 보존한다. 덩어리 윗변 y를 돌려준다."""
+    y, spots = y0, [0] * len(story)
+    for k in range(len(story) - 1, -1, -1):
+        fl = story[k]
+        _, h = fl.wrap(width, 1e5)
+        spots[k] = y
+        y += h + fl.getSpaceBefore() + (story[k - 1].getSpaceAfter() if k else 0)
+    for fl, sy in zip(story, spots):
+        fl.drawOn(c, x0, sy)
+    return y
 
 
 def measure_pages(sec):
     """제목 쪽(첫 쪽)과 이어지는 쪽의 프레임 높이로 필요한 쪽수를 계산한다."""
+    if sec.get("anchor"):
+        return 1
     dummy = canvas.Canvas(io.BytesIO())
     x0, y0, x1, _ = mm(M_INNER), mm(M_BOTTOM), mm(TRIM_W - M_OUTER), 0
     story, pages = essay_story(sec), 0
@@ -341,6 +363,11 @@ def draw_page(c, spec, ctx):
         body_block(c, ctx, d["howto"]["body"], x0, y0, x1, mm(TRIM_H - 58), "[사용법 원고 — 추후 전달]", spec)
     elif k == "essay":
         sec = d["sections"][spec["sec"]]
+        if sec.get("anchor") == "bottom-left":
+            top = draw_anchored(c, essay_story(sec), x0, y0, x1 - x0)
+            if top > y1:
+                ctx.warnings.append(f"p.{spec['page']:03d}: 아래 정렬 덩어리가 텍스트 영역을 넘침")
+            return
         y_top = essay_head(c, x0, x1, sec["title"], sec.get("rule", True)) if spec["part"] == 0 else mm(TRIM_H - 34)
         story = ctx.stories.setdefault(spec["sec"], essay_story(sec))
         flow_page(story, Frame(x0, y0, x1 - x0, y_top - y0, leftPadding=0, rightPadding=0, topPadding=0,
