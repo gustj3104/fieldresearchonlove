@@ -224,6 +224,7 @@ class Ctx:
     def __init__(self, data, actions, font_pt):
         self.data, self.actions, self.font_pt = data, actions, font_pt
         self.warnings, self.line_counts, self.illust_info = [], {}, {}
+        self.final = False  # 최종 주문 모드: 빈 판권 항목 생략, 시안 표기 제거
         self.stories = {}  # 에세이 구간 본문 흐름(쪽 순서대로 소비)
 
     def area(self, side):
@@ -416,7 +417,7 @@ def draw_page(c, spec, ctx):
         for line in (f"{d['title_ko']}  {d['title_en']}", d["project"], f"엮은이  {d['editor']}"):
             c.drawString(x0, yy, line)
             yy -= 14
-        rows = list(d["colophon"].items())
+        rows = [(k, v) for k, v in d["colophon"].items() if v or not ctx.final]  # 최종본은 빈 항목 줄 생략
         lead = 15
         yy = y0 + lead * (len(rows) - 1) + 4
         c.setFont(FONT_REG, 8)
@@ -447,7 +448,7 @@ def body_block(c, ctx, paragraphs, x0, y0, x1, y_top, placeholder, spec):
 
 
 # ───────────────────────── 출력 ─────────────────────────
-def set_boxes(path, trim_off, slug_pt, w_pt, h_pt, title):
+def set_boxes(path, trim_off, slug_pt, w_pt, h_pt, title, subject):
     """TrimBox = 148×210mm, BleedBox = 도련 포함 영역(MediaBox에서 슬러그 제외)."""
     with pikepdf.open(path, allow_overwriting_input=True) as pdf:
         tw, th = TRIM_W * MM, TRIM_H * MM
@@ -456,7 +457,7 @@ def set_boxes(path, trim_off, slug_pt, w_pt, h_pt, title):
             pg.BleedBox = [slug_pt, slug_pt, w_pt - slug_pt, h_pt - slug_pt]
         pdf.docinfo["/Title"] = title
         pdf.docinfo["/Author"] = "윤현지 (엮은이)"
-        pdf.docinfo["/Subject"] = "A5 내지 인쇄용 시안 (최종 원고 아님)"
+        pdf.docinfo["/Subject"] = subject
         pdf.save(path)
 
 
@@ -465,7 +466,7 @@ def render_print(plan, ctx, out, bleed_mm, marks):
     off = mm(bleed_mm + slug)
     w, h = mm(TRIM_W + 2 * (bleed_mm + slug)), mm(TRIM_H + 2 * (bleed_mm + slug))
     c = canvas.Canvas(str(out), pagesize=(w, h), pageCompression=1, invariant=1, initialFontName=FONT_REG)
-    c.setTitle("사랑행동 내지 (인쇄용 시안)")
+    c.setTitle("사랑행동 내지" if ctx.final else "사랑행동 내지 (인쇄용 시안)")
     for spec in plan:
         c.saveState()
         c.translate(off, off)
@@ -475,7 +476,8 @@ def render_print(plan, ctx, out, bleed_mm, marks):
             draw_marks(c, off, bleed_mm)
         c.showPage()
     c.save()
-    set_boxes(out, off, mm(slug), w, h, out.stem)
+    set_boxes(out, off, mm(slug), w, h, "사랑행동 / Acts of Love 내지" + ("" if ctx.final else " (시안)"),
+               "A5 내지 인쇄용 최종본" if ctx.final else "A5 내지 인쇄용 시안 (최종 원고 아님)")
 
 
 def draw_marks(c, off, bleed_mm):
@@ -586,7 +588,7 @@ def write_tables(plan, ctx, outdir, bleed_mm):
         w.writerow(hdr)
         w.writerows(rows)
     with open(outdir / "page-map.md", "w", encoding="utf-8") as f:
-        f.write("# 편집표 — 사랑행동 / Acts of Love 내지 (인쇄용 시안)\n\n")
+        f.write(f"# 편집표 — 사랑행동 / Acts of Love 내지 ({'최종본' if ctx.final else '인쇄용 시안'})\n\n")
         f.write(f"- 총 {len(plan)}쪽 (4의 배수), A5 148×210mm, 인쇄용 PDF는 낱장 순서 (1쪽 = 오른쪽)\n")
         f.write("- 사랑 행동 N: 일러스트 = 왼쪽(짝수 쪽), 문장 = 오른쪽(홀수 쪽)\n\n")
         f.write("| " + " | ".join(hdr) + " |\n|" + "---|" * len(hdr) + "\n")
@@ -600,10 +602,32 @@ def write_tables(plan, ctx, outdir, bleed_mm):
             w.writerow([f"{n:03d}", len(t), ctx.line_counts.get(n, ""), t])
 
 
+def final_gate(data, actions):
+    """최종 주문 모드 사전 검문: 플레이스홀더·빈 원고가 있으면 중단."""
+    problems = []
+    ph = [n for n, a in actions.items() if PLACEHOLDER_RE.match(a["text"]) or not a["text"].strip()]
+    if ph:
+        problems.append(f"사랑 행동 플레이스홀더/빈 문장 {len(ph)}개: {ph[:5]}…")
+    if not data.get("phrase"):
+        problems.append("문구(phrase) 없음")
+    if not data["howto"]["body"]:
+        problems.append("사용법 원고 없음")
+    for sec in data["sections"]:
+        if not sec["body"]:
+            problems.append(f"구간 원고 없음: {sec['title']}")
+    for n in range(1, len(actions) + 1):
+        if not find_illustration(n, actions):
+            problems.append(f"사랑 행동 {n:03d} 일러스트 없음")
+            break
+    if problems:
+        sys.exit("최종 빌드 중단 — 미완성 항목:\n  - " + "\n  - ".join(problems))
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--bleed", type=float, default=3.0, help="도련(mm), 기본 3")
     ap.add_argument("--font-size", type=float, default=ACTION_FONT_PT)
+    ap.add_argument("--final", action="store_true", help="최종 주문용: output/final/ 에 시안 표기 없이 생성")
     a = ap.parse_args()
 
     fonts = ROOT / "fonts"
@@ -615,17 +639,25 @@ def main():
     data = json.load(open(ROOT / "data/book.json", encoding="utf-8"))
     actions = load_actions()
     POOL_PLAN.update(make_pool_plan(len(actions), data.get("illustration_seed", 7)))
+    if a.final:
+        final_gate(data, actions)
     plan = build_plan(data, len(actions))
     assert len(plan) % 4 == 0
-    out = ROOT / "output"
-    out.mkdir(exist_ok=True)
+    out = ROOT / "output" / ("final" if a.final else "")
+    out.mkdir(parents=True, exist_ok=True)
+    tag = "FINAL" if a.final else "DRAFT"
 
-    ctx = Ctx(data, actions, a.font_size)
+    def new_ctx():
+        c = Ctx(data, actions, a.font_size)
+        c.final = a.final
+        return c
+
+    ctx = new_ctx()
     b = a.bleed
-    render_print(plan, ctx, out / f"ACT-OF-LOVE_interior_DRAFT_A5_bleed{b:g}mm.pdf", b, False)
-    render_print(plan, Ctx(data, actions, a.font_size), out / "ACT-OF-LOVE_interior_DRAFT_A5_trim-only.pdf", 0, False)
-    render_print(plan, Ctx(data, actions, a.font_size), out / f"ACT-OF-LOVE_interior_DRAFT_A5_bleed{b:g}mm_with-marks.pdf", b, True)
-    render_review(plan, ctx, out / "ACT-OF-LOVE_review-spreads_DRAFT.pdf")
+    render_print(plan, ctx, out / f"ACT-OF-LOVE_interior_{tag}_A5_bleed{b:g}mm.pdf", b, False)
+    render_print(plan, new_ctx(), out / f"ACT-OF-LOVE_interior_{tag}_A5_trim-only.pdf", 0, False)
+    render_print(plan, new_ctx(), out / f"ACT-OF-LOVE_interior_{tag}_A5_bleed{b:g}mm_with-marks.pdf", b, True)
+    render_review(plan, new_ctx(), out / f"ACT-OF-LOVE_review-spreads_{'CHECK' if a.final else 'DRAFT'}.pdf")
     write_tables(plan, ctx, out, b)
     print(f"{len(plan)}쪽 생성 완료 → {out}")
     for w in ctx.warnings:

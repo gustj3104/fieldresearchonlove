@@ -8,6 +8,8 @@ pip install -r requirements.txt
 ./scripts/fetch_fonts.sh        # Noto Serif KR (OFL) → fonts/
 python3 build.py                # output/ 에 PDF·편집표 생성 (--bleed 3 --font-size 13)
 python3 verify.py               # 자동 검수
+python3 build.py --final        # 최종 주문용(output/final/): 미완성 원고가 있으면 중단, 시안 표기 없음
+python3 verify.py --final
 ```
 
 ## 수정하는 곳

@@ -11,7 +11,9 @@ import pikepdf
 import pymupdf
 
 ROOT = Path(__file__).resolve().parent
-OUT = ROOT / "output"
+FINAL = "--final" in sys.argv
+OUT = ROOT / "output" / ("final" if FINAL else "")
+TAG = "FINAL" if FINAL else "DRAFT"
 MM = 72 / 25.4
 fails = []
 
@@ -27,9 +29,9 @@ data = json.load(open(ROOT / "data/book.json", encoding="utf-8"))
 norm = lambda s: re.sub(r"\s+", "", s)
 
 variants = {
-    "bleed3mm": (OUT / "ACT-OF-LOVE_interior_DRAFT_A5_bleed3mm.pdf", 3),
-    "trim-only": (OUT / "ACT-OF-LOVE_interior_DRAFT_A5_trim-only.pdf", 0),
-    "with-marks": (OUT / "ACT-OF-LOVE_interior_DRAFT_A5_bleed3mm_with-marks.pdf", 3),
+    "bleed3mm": (OUT / f"ACT-OF-LOVE_interior_{TAG}_A5_bleed3mm.pdf", 3),
+    "trim-only": (OUT / f"ACT-OF-LOVE_interior_{TAG}_A5_trim-only.pdf", 0),
+    "with-marks": (OUT / f"ACT-OF-LOVE_interior_{TAG}_A5_bleed3mm_with-marks.pdf", 3),
 }
 docs = {k: pymupdf.open(p) for k, (p, _) in variants.items()}
 N = len(docs["bleed3mm"])
@@ -121,12 +123,12 @@ if all(art_hash):
 blank_pages = [2, 4] + list(range(COL + 1, N + 1))
 check(all(not page_text[p - 1].strip() and not d[p - 1].get_drawings() and not d[p - 1].get_images() for p in blank_pages),
       f"빈 페이지 {blank_pages} 에 어떤 내용도 없음")
-check("제작정보" in norm(page_text[COL - 1]) and "Copyright" in norm(page_text[COL - 1]) and COL % 2 == 0, f"p.{COL} = 제작 정보 및 판권 (왼쪽), 사랑 행동 100 바로 다음")
+check("제작정보" in norm(page_text[COL - 1]) and ("Copyright" in norm(page_text[COL - 1]) or not data["colophon"].get("Copyright") and FINAL) and COL % 2 == 0, f"p.{COL} = 제작 정보 및 판권 (왼쪽), 사랑 행동 100 바로 다음")
 check(norm(page_text[COL - 2]) == norm(actions[100]), f"p.{COL - 1} = 사랑 행동 100 문장 (마지막 사랑 행동 뒤에 제작 정보)")
-labels = ["기획", "제작", "편집", "디자인", "프로젝트 운영", "이메일", "Copyright"]
+labels = [k for k, val in data["colophon"].items() if val or not FINAL]  # 최종본은 채워진 항목만
 lines213 = [l.strip() for l in page_text[COL - 1].splitlines()]
 pos = [lines213.index(l) if l in lines213 else -1 for l in labels]
-check(all(p >= 0 for p in pos) and pos == sorted(pos), "판권 항목 7개가 지정 순서로 존재")
+check(all(p >= 0 for p in pos) and pos == sorted(pos), f"판권 항목 {len(labels)}개가 지정 순서로 존재 {labels}")
 check(norm(data["title_ko"]) in norm(page_text[2]) and norm(data["title_en"]) in norm(page_text[2]) and "엮은이윤현지" in norm(page_text[2]), "p.3 속표지: 제목·영문·엮은이 (book.json 표기와 일치)")
 check("HOWTOUSETHISBOOK" in norm(page_text[4]) and "책사용법" in norm(page_text[4]), "p.5 사용법 오른쪽 페이지")
 # 서문·후기·감사 구간(p.6 ~ 사랑 행동 앞): 원고 원문·순서 일치
@@ -139,6 +141,12 @@ check(norm(sec_actual).replace("\n", "") == norm(sec_expect), f"p.6–{SEC_END} 
 
 # 한글 깨짐/누락: 추출 텍스트에 대체문자·PUA 없음, 문장 원문 일치(위에서 검증)
 all_txt = "".join(page_text)
+if FINAL:
+    check("[" not in all_txt and "]" not in all_txt and "추후" not in all_txt,
+          "최종본에 플레이스홀더 표기([사랑 행동 NNN], [일러스트], [추후 작성] 등) 없음")
+    with pikepdf.open(variants["bleed3mm"][0]) as _pdf:
+        meta = " ".join(str(x) for x in _pdf.docinfo.values())
+        check("시안" not in meta and "DRAFT" not in meta.upper(), "PDF 메타데이터에 시안/DRAFT 표기 없음")
 check("�" not in all_txt and not re.search("[-]", all_txt), "추출 텍스트에 깨진 글자(U+FFFD/PUA) 없음")
 
 # 텍스트가 재단선 기준 안전 여백 안에 있는가 + 문장 크기 일정
@@ -168,7 +176,7 @@ check(len(sizes) == 1, f"사랑 행동 문장 글꼴·크기 전부 동일 {size
 check(max(abs(x) for x in cy_dev) < 0.1, f"사랑 행동 문장 블록 세로 중심 편차 최대 {max(abs(x) for x in cy_dev):.2f}mm (기준선 중심, 허용 0.1mm)")
 
 # 검토용 PDF 순서
-rv = pymupdf.open(OUT / "ACT-OF-LOVE_review-spreads_DRAFT.pdf")
+rv = pymupdf.open(OUT / f"ACT-OF-LOVE_review-spreads_{'CHECK' if FINAL else 'DRAFT'}.pdf")
 seq = []
 for pg in rv:
     seq += [int(m) for m in re.findall(r"p\.(\d{3})\s+[LR]", pg.get_text())]
