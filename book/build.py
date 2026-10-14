@@ -8,6 +8,8 @@
 """
 import argparse
 import csv
+import html
+import io
 import json
 import random
 import re
@@ -59,9 +61,12 @@ def build_plan(data, n_actions):
     add("title", "B 도입부", "속표지")
     add("blank", "B 도입부", "빈 페이지 (속표지 뒷면 / 사용법 펼침면 왼쪽)")
     add("howto", "B 도입부", "사용법 (펼침면 오른쪽)")
-    add("intro_open", "C 프로젝트 소개", "프로젝트 소개 구간 표지 (1/8)")
-    for i, item in enumerate(data["intro"]):
-        add("intro", "C 프로젝트 소개", f"{item['title']} ({i + 2}/8)", index=i)
+    for i, sec in enumerate(data["sections"]):
+        n = measure_pages(sec)
+        for part in range(n):
+            add("essay", "C 서문·후기", f"{sec['title']} ({part + 1}/{n})", sec=i, part=part, nparts=n)
+    if len(plan) % 2 == 0:  # 사랑 행동 일러스트가 왼쪽(짝수) 쪽에서 시작하도록
+        add("blank", "C 서문·후기", "빈 페이지 (사랑 행동 시작 위치 조정)")
     for n in range(1, n_actions + 1):
         add("action_art", "D 사랑 행동", f"사랑 행동 {n:03d} 일러스트", action=n)
         add("action_text", "D 사랑 행동", f"사랑 행동 {n:03d} 문장", action=n)
@@ -219,12 +224,85 @@ class Ctx:
     def __init__(self, data, actions, font_pt):
         self.data, self.actions, self.font_pt = data, actions, font_pt
         self.warnings, self.line_counts, self.illust_info = [], {}, {}
+        self.stories = {}  # 에세이 구간 본문 흐름(쪽 순서대로 소비)
 
     def area(self, side):
         """텍스트 영역(pt): (x0, y0, x1, y1). 오른쪽 면은 왼쪽이 안쪽(제본쪽)."""
         left = M_INNER if side == "R" else M_OUTER
         right = M_OUTER if side == "R" else M_INNER
         return mm(left), mm(M_BOTTOM), mm(TRIM_W - right), mm(TRIM_H - M_TOP)
+
+
+
+# ───────────────────────── 에세이 구간 (서문·후기·감사) ─────────────────────────
+def _k100():
+    return CMYKColor(*K100)
+
+
+def essay_head(c, x0, x1, title):
+    """제목+짧은 선을 그리고 본문이 시작할 y(pt)를 돌려준다."""
+    c.setFont(FONT_SEMI, 15)
+    yy = mm(TRIM_H - 44)
+    for ln in wrap_balanced(title, FONT_SEMI, 15, x1 - x0):
+        c.drawString(x0, yy, ln)
+        yy -= 22
+    yy += 22
+    c.setLineWidth(0.4)
+    c.line(x0, yy - mm(6), x0 + mm(10), yy - mm(6))
+    return yy - mm(14)
+
+
+PAGE_BREAK = object()  # book.json 본문의 "\f" = 이 위치에서 쪽 나눔
+
+
+def flow_page(story, frame, canv):
+    """PAGE_BREAK 전까지의 문단을 한 쪽 프레임에 흘려 넣고, 넘친 조각은 다음 쪽으로 남긴다."""
+    while story and story[0] is PAGE_BREAK:
+        story.pop(0)
+    i = next((k for k, f in enumerate(story) if f is PAGE_BREAK), len(story))
+    chunk, rest = story[:i], story[i:]
+    frame.addFromList(chunk, canv)
+    story[:] = chunk + rest
+
+
+def essay_story(sec):
+    """문단(빈 줄 구분) → Paragraph. 문단 안의 줄바꿈은 그대로 유지, ***강조***는 SemiBold."""
+    k = _k100()
+    st = ParagraphStyle("essay", fontName=FONT_REG, fontSize=9.5, leading=16.5, textColor=k, spaceAfter=7,
+                        allowWidows=0, allowOrphans=0)
+    note = ParagraphStyle("essay-note", parent=st, fontSize=8, leading=14, spaceBefore=22)
+
+    maxw = mm(TRIM_W - M_INNER - M_OUTER)
+
+    def markup(t):
+        # 폭을 넘는 줄은 한 단어만 넘어가지 않도록 균형 있게 직접 나눈다.
+        lines = []
+        for ln in t.split("\n"):
+            lines += wrap_balanced(ln, FONT_REG, 9.5, maxw) if "***" not in ln and text_w(ln, FONT_REG, 9.5) > maxw else [ln]
+        t = "<br/>".join(html.escape(ln, quote=False) for ln in lines)
+        return re.sub(r"\*\*\*(.+?)\*\*\*", lambda m: f'<font name="{FONT_SEMI}">{m.group(1)}</font>', t)
+
+    story = [PAGE_BREAK if p == "\f" else Paragraph(markup(p), st) for p in sec["body"]]
+    if sec.get("note"):
+        story.append(Paragraph(markup(sec["note"]), note))
+    return story
+
+
+def measure_pages(sec):
+    """제목 쪽(첫 쪽)과 이어지는 쪽의 프레임 높이로 필요한 쪽수를 계산한다."""
+    dummy = canvas.Canvas(io.BytesIO())
+    x0, y0, x1, _ = mm(M_INNER), mm(M_BOTTOM), mm(TRIM_W - M_OUTER), 0
+    story, pages = essay_story(sec), 0
+    while story:
+        y_top = essay_head(dummy, x0, x1, sec["title"]) if pages == 0 else mm(TRIM_H - 34)
+        flow_page(story, Frame(x0, y0, x1 - x0, y_top - y0, leftPadding=0, rightPadding=0, topPadding=0,
+                               bottomPadding=0), dummy)
+        while story and story[0] is PAGE_BREAK:
+            story.pop(0)
+        pages += 1
+        if pages > 8:
+            sys.exit("에세이 구간이 8쪽을 넘습니다. 원고를 확인하세요.")
+    return pages
 
 
 def draw_page(c, spec, ctx):
@@ -254,25 +332,16 @@ def draw_page(c, spec, ctx):
         c.setLineWidth(0.4)
         c.line(x0, mm(TRIM_H - 50), x0 + mm(10), mm(TRIM_H - 50))
         body_block(c, ctx, d["howto"]["body"], x0, y0, x1, mm(TRIM_H - 58), "[사용법 원고 — 추후 전달]", spec)
-    elif k == "intro_open":
-        c.setFont(FONT_SEMI, 20)
-        c.drawCentredString(cx, cy + mm(2), d["intro_opener"]["title"])
-        c.setFont(FONT_REG, 8.5)
-        c.drawCentredString(cx, cy - mm(8), d["intro_opener"]["sub"])
-    elif k == "intro":
-        item = d["intro"][spec["index"]]
-        c.setFont(FONT_REG, 8)
-        c.drawString(x0, mm(TRIM_H - 34), f"{spec['index'] + 1:02d}")
-        title_lines = wrap_balanced(item["title"], FONT_SEMI, 15, x1 - x0)
-        yy = mm(TRIM_H - 44)
-        c.setFont(FONT_SEMI, 15)
-        for ln in title_lines:
-            c.drawString(x0, yy, ln)
-            yy -= 22
-        yy += 22
-        c.setLineWidth(0.4)
-        c.line(x0, yy - mm(6), x0 + mm(10), yy - mm(6))
-        body_block(c, ctx, item["body"], x0, y0, x1, yy - mm(14), f"[본문 원고 — {item['title']}]", spec)
+    elif k == "essay":
+        sec = d["sections"][spec["sec"]]
+        y_top = essay_head(c, x0, x1, sec["title"]) if spec["part"] == 0 else mm(TRIM_H - 34)
+        story = ctx.stories.setdefault(spec["sec"], essay_story(sec))
+        flow_page(story, Frame(x0, y0, x1 - x0, y_top - y0, leftPadding=0, rightPadding=0, topPadding=0,
+                               bottomPadding=0), c)
+        while story and story[0] is PAGE_BREAK:
+            story.pop(0)
+        if spec["part"] == spec["nparts"] - 1 and story:
+            ctx.warnings.append(f"p.{spec['page']:03d}: 본문이 영역을 넘침 (남은 조각 {len(story)}개)")
     elif k == "action_text":
         n = spec["action"]
         text = ctx.actions[n]["text"]
@@ -396,6 +465,7 @@ def render_review(plan, ctx, out):
     c = canvas.Canvas(str(out), pagesize=(sw, sh), pageCompression=1, invariant=1, initialFontName=FONT_REG)
     c.setTitle("사랑 행동 내지 — 검토용 펼침면 (인쇄 불가)")
     by_page = {p["page"]: p for p in plan}
+    rctx = Ctx(ctx.data, ctx.actions, ctx.font_pt)  # 에세이 흐름이 쪽 순서대로 소비되도록 하나만 사용
     last = len(plan)
     spreads = [(None, 1)] + [(p, p + 1) for p in range(2, last, 2)] + [(last, None)]
     for left, right in spreads:
@@ -417,7 +487,7 @@ def render_review(plan, ctx, out):
             c.rect(ox, mm(bot_m), mm(TRIM_W), mm(TRIM_H), stroke=0, fill=1)
             c.saveState()
             c.translate(ox, mm(bot_m))
-            draw_page(c, spec, Ctx(ctx.data, ctx.actions, ctx.font_pt))
+            draw_page(c, spec, rctx)
             ax0, ay0, ax1, ay1 = ctx.area(spec["side"])
             c.setStrokeColorRGB(0.2, 0.4, 0.9)
             c.setLineWidth(0.3)
@@ -468,14 +538,12 @@ def write_tables(plan, ctx, outdir, bleed_mm):
             status = "원고 반영" if data.get("phrase") else "플레이스홀더"
         elif p["kind"] == "howto":
             status = "원고 반영" if data["howto"]["body"] else "플레이스홀더"
-        elif p["kind"] == "intro":
-            status = "원고 반영" if data["intro"][p["index"]]["body"] else "플레이스홀더"
+        elif p["kind"] == "essay":
+            status = "원고 반영"
         elif p["kind"] == "title":
             status = "확정 정보(제목·엮은이)"
-        elif p["kind"] != "intro_open":
-            status = status or "플레이스홀더"
         else:
-            status = "플레이스홀더"
+            status = status or "플레이스홀더"
         is_img = p["kind"] == "action_art"
         rows.append([f"{pg:03d}", spread, "우" if p["side"] == "R" else "좌", p["section"], p["component"],
                      f"{n:03d}" if n else "", status, "" if is_img else lines, lines if is_img else ""])
