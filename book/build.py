@@ -172,6 +172,19 @@ def wrap_balanced(text, font, size, maxw):
     n = len(base)
     if n == 1:
         return base
+    if n == 2:
+        # 두 줄이면 모든 분할점 중 줄 길이 차가 작은 쪽을 고르되, 쉼표 뒤에서 끊는 분할을 우선한다.
+        best = None
+        for k in range(1, len(words)):
+            a, b = " ".join(words[:k]), " ".join(words[k:])
+            wa, wb = text_w(a, font, size), text_w(b, font, size)
+            if max(wa, wb) > maxw:
+                continue
+            cost = abs(wa - wb) - (5 * size if a.endswith(",") else 0)
+            if best is None or cost < best[0]:
+                best = (cost, [a, b])
+        if best:
+            return best[1]
     lo, hi = max(text_w(w, font, size) for w in words), maxw
     lo = min(lo, hi)
     for _ in range(40):
@@ -445,7 +458,7 @@ def write_tables(plan, ctx, outdir, bleed_mm):
             status = "빈 페이지"
         elif p["kind"] == "action_text":
             ph = PLACEHOLDER_RE.match(ctx.actions[n]["text"])
-            status = "플레이스홀더" if ph else "테스트 문장(임시)"
+            status = "플레이스홀더" if ph else "원고 반영"
             lines = ctx.line_counts.get(n, "")
         elif p["kind"] == "action_art":
             ill = find_illustration(n, ctx.actions)
