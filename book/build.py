@@ -23,7 +23,7 @@ from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.lib.colors import CMYKColor
 from reportlab.pdfgen import canvas
-from reportlab.platypus import Frame, Paragraph
+from reportlab.platypus import Frame, Paragraph, Spacer
 from reportlab.lib.styles import ParagraphStyle
 
 ROOT = Path(__file__).resolve().parent
@@ -239,7 +239,7 @@ def _k100():
     return CMYKColor(*K100)
 
 
-def essay_head(c, x0, x1, title):
+def essay_head(c, x0, x1, title, rule=True):
     """제목+짧은 선을 그리고 본문이 시작할 y(pt)를 돌려준다."""
     c.setFont(FONT_SEMI, 15)
     yy = mm(TRIM_H - 44)
@@ -247,8 +247,9 @@ def essay_head(c, x0, x1, title):
         c.drawString(x0, yy, ln)
         yy -= 22
     yy += 22
-    c.setLineWidth(0.4)
-    c.line(x0, yy - mm(6), x0 + mm(10), yy - mm(6))
+    if rule:  # 제목 아래 짧은 나눔줄 (구간별로 "rule": false 로 삭제 가능)
+        c.setLineWidth(0.4)
+        c.line(x0, yy - mm(6), x0 + mm(10), yy - mm(6))
     return yy - mm(14)
 
 
@@ -282,7 +283,9 @@ def essay_story(sec):
         t = "<br/>".join(html.escape(ln, quote=False) for ln in lines)
         return re.sub(r"\*\*\*(.+?)\*\*\*", lambda m: f'<font name="{FONT_SEMI}">{m.group(1)}</font>', t)
 
-    story = [PAGE_BREAK if p == "\f" else Paragraph(markup(p), st) for p in sec["body"]]
+    # "\f" = 쪽 나눔, "" = 한 줄 추가 간격(원고의 연속 빈 줄), 그 외 = 문단
+    story = [PAGE_BREAK if p == "\f" else Spacer(1, st.leading) if p == "" else Paragraph(markup(p), st)
+             for p in sec["body"]]
     if sec.get("note"):
         story.append(Paragraph(markup(sec["note"]), note))
     return story
@@ -294,7 +297,7 @@ def measure_pages(sec):
     x0, y0, x1, _ = mm(M_INNER), mm(M_BOTTOM), mm(TRIM_W - M_OUTER), 0
     story, pages = essay_story(sec), 0
     while story:
-        y_top = essay_head(dummy, x0, x1, sec["title"]) if pages == 0 else mm(TRIM_H - 34)
+        y_top = essay_head(dummy, x0, x1, sec["title"], sec.get("rule", True)) if pages == 0 else mm(TRIM_H - 34)
         flow_page(story, Frame(x0, y0, x1 - x0, y_top - y0, leftPadding=0, rightPadding=0, topPadding=0,
                                bottomPadding=0), dummy)
         while story and story[0] is PAGE_BREAK:
@@ -334,7 +337,7 @@ def draw_page(c, spec, ctx):
         body_block(c, ctx, d["howto"]["body"], x0, y0, x1, mm(TRIM_H - 58), "[사용법 원고 — 추후 전달]", spec)
     elif k == "essay":
         sec = d["sections"][spec["sec"]]
-        y_top = essay_head(c, x0, x1, sec["title"]) if spec["part"] == 0 else mm(TRIM_H - 34)
+        y_top = essay_head(c, x0, x1, sec["title"], sec.get("rule", True)) if spec["part"] == 0 else mm(TRIM_H - 34)
         story = ctx.stories.setdefault(spec["sec"], essay_story(sec))
         flow_page(story, Frame(x0, y0, x1 - x0, y_top - y0, leftPadding=0, rightPadding=0, topPadding=0,
                                bottomPadding=0), c)
