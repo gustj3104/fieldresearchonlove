@@ -279,7 +279,11 @@ def essay_story(sec):
         # 폭을 넘는 줄은 한 단어만 넘어가지 않도록 균형 있게 직접 나눈다.
         lines = []
         for ln in t.split("\n"):
-            lines += wrap_balanced(ln, FONT_REG, 9.5, maxw) if "***" not in ln and text_w(ln, FONT_REG, 9.5) > maxw else [ln]
+            if "***" not in ln and text_w(ln, FONT_REG, 9.5) > maxw:
+                bl = wrap_balanced(ln, FONT_REG, 9.5, maxw)
+                lines += bl if len(bl) == 2 else [ln]  # 두 줄이면 균형 분할, 3줄 이상 산문은 자연스럽게 흘림
+            else:
+                lines.append(ln)
         t = "<br/>".join(html.escape(ln, quote=False) for ln in lines)
         return re.sub(r"\*\*\*(.+?)\*\*\*", lambda m: f'<font name="{FONT_SEMI}">{m.group(1)}</font>', t)
 
