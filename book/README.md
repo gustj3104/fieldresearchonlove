@@ -14,7 +14,7 @@ python3 verify.py               # 자동 검수
 | 바꿀 것 | 파일 |
 |---|---|
 | 사랑 행동 100개 문장 | `data/actions.csv` (`number,text,illustration`) — 문장만 바꾸면 모든 서식 유지 |
-| 일러스트 | `illustrations/001.png` … `100.png` |
+| 일러스트 | 기본: `illustrations/pool/*.png` 를 100개 쪽에 랜덤 배치(연속 쪽 동일 이미지 금지, 시드 `illustration_seed`). 번호별 지정은 `illustrations/001.png` 또는 `actions.csv` `illustration` 열 |
 | 문구·속표지·사용법·소개 원고·판권 | `data/book.json` (본문은 문단 문자열 배열) |
 | 여백·글꼴 크기·행간·일러스트 크기 | `build.py` 상단 상수 |
 

@@ -3,20 +3,58 @@
   "title_en": "THE ACT OF LOVE",
   "editor": "윤현지",
   "project": "챠챠챠 6기 — 매주 화요일의 사랑연구회",
-  "phrase": "",
-  "howto": { "heading_en": "HOW TO USE THIS BOOK", "heading_ko": "책 사용법", "body": [] },
-  "intro_opener": { "title": "프로젝트 소개", "sub": "챠챠챠 6기 — 매주 화요일의 사랑연구회" },
+  "phrase": "매주 화요일의 사랑연구회 동료 여러분,\n쉽게 사랑하시길",
+  "howto": {
+    "heading_en": "HOW TO USE THIS BOOK",
+    "heading_ko": "책 사용법",
+    "body": [
+      "1. 책을 덮은 채로 10초 동안 마음 속 사랑 고민에 집중합니다.",
+      "2. 답을 볼 준비가 되었다면 손가락으로 페이지의 모서리를 훑습니다.",
+      "3. 손가락이 멈춘 페이지에 적힌 한 줄의 사랑행동 지령을 수행합니다."
+    ]
+  },
+  "intro_opener": {
+    "title": "프로젝트 소개",
+    "sub": "챠챠챠 6기 — 매주 화요일의 사랑연구회"
+  },
   "intro": [
-    { "title": "프로젝트가 시작된 이유", "body": [] },
-    { "title": "사랑을 연구하게 된 질문", "body": [] },
-    { "title": "프로젝트 전체 개요", "body": [] },
-    { "title": "매주 화요일의 사랑연구회", "body": [] },
-    { "title": "사랑을 연구하기 위해 진행한 활동", "body": [] },
-    { "title": "LOVE ACTION ARCHIVE와 사랑 행동 수집 과정", "body": [] },
-    { "title": "책을 만들게 된 이유", "body": [] }
+    {
+      "title": "프로젝트가 시작된 이유",
+      "body": []
+    },
+    {
+      "title": "사랑을 연구하게 된 질문",
+      "body": []
+    },
+    {
+      "title": "프로젝트 전체 개요",
+      "body": []
+    },
+    {
+      "title": "매주 화요일의 사랑연구회",
+      "body": []
+    },
+    {
+      "title": "사랑을 연구하기 위해 진행한 활동",
+      "body": []
+    },
+    {
+      "title": "LOVE ACTION ARCHIVE와 사랑 행동 수집 과정",
+      "body": []
+    },
+    {
+      "title": "책을 만들게 된 이유",
+      "body": []
+    }
   ],
   "colophon": {
-    "기획": "", "제작": "", "편집": "", "디자인": "",
-    "프로젝트 운영": "", "이메일": "", "Copyright": ""
-  }
+    "기획": "",
+    "제작": "",
+    "편집": "",
+    "디자인": "",
+    "프로젝트 운영": "",
+    "이메일": "",
+    "Copyright": ""
+  },
+  "illustration_seed": 7
 }

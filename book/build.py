@@ -9,6 +9,7 @@
 import argparse
 import csv
 import json
+import random
 import re
 import sys
 from pathlib import Path
@@ -18,6 +19,7 @@ from PIL import Image
 from reportlab.lib.utils import ImageReader
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
+from reportlab.lib.colors import CMYKColor
 from reportlab.pdfgen import canvas
 from reportlab.platypus import Frame, Paragraph
 from reportlab.lib.styles import ParagraphStyle
@@ -87,7 +89,28 @@ def load_actions():
     return actions
 
 
+POOL_PLAN = {}  # 사랑 행동 번호 -> 풀 이미지 경로 (main에서 채움)
+
+
+def make_pool_plan(n_actions, seed):
+    """illustrations/pool/*.png 를 랜덤 배치. 같은 이미지가 연속 쪽에 나오지 않고, 이미지별 사용 횟수가 고르게 분배된다."""
+    pool = sorted((ROOT / "illustrations" / "pool").glob("*.png"))
+    if len(pool) < 2:
+        return {}
+    rng = random.Random(seed)
+    seq = []
+    while len(seq) < n_actions:
+        bag = pool[:]
+        rng.shuffle(bag)
+        if seq and bag[0] == seq[-1]:  # 묶음 경계에서 연속 방지
+            k = next(i for i in range(1, len(bag)) if bag[i] != seq[-1])
+            bag[0], bag[k] = bag[k], bag[0]
+        seq += bag
+    return {n: seq[n - 1] for n in range(1, n_actions + 1)}
+
+
 def find_illustration(n, actions):
+    """우선순위: actions.csv illustration 열 > illustrations/NNN.* > 풀 랜덤 배치 > 없음(플레이스홀더)."""
     name = actions[n]["illustration"]
     if name:
         p = ROOT / "illustrations" / name
@@ -96,7 +119,19 @@ def find_illustration(n, actions):
         p = ROOT / "illustrations" / f"{n:03d}.{ext}"
         if p.exists():
             return p
-    return None
+    return POOL_PLAN.get(n)
+
+
+_IMG_CACHE = {}
+
+
+def load_illustration(path):
+    """그레이스케일(K)로 변환하고 먹(ink) 영역 기준으로 여백을 잘라 시각적 중앙이 맞도록 한다."""
+    if path not in _IMG_CACHE:
+        im = Image.open(path).convert("L")
+        bbox = im.point(lambda v: 255 if v < 200 else 0).getbbox()
+        _IMG_CACHE[path] = im.crop(bbox) if bbox else im
+    return _IMG_CACHE[path]
 
 
 # ───────────────────────── 조판 도우미 ─────────────────────────
@@ -189,8 +224,10 @@ def draw_page(c, spec, ctx):
         return
     if k == "phrase":
         c.setFont(FONT_REG, 10)
-        txt = d.get("phrase") or "[문구 한 줄 — 추후 전달]"
-        c.drawCentredString(cx, cy - 3.5, txt)
+        lines = (d.get("phrase") or "[문구 한 줄 — 추후 전달]").split("\n")
+        top = cy + (len(lines) - 1) / 2 * 18
+        for i, ln in enumerate(lines):
+            c.drawCentredString(cx, top - i * 18 - 3.5, ln)
     elif k == "title":
         c.setFont(FONT_SEMI, 30)
         c.drawCentredString(cx, mm(TRIM_H - 78), d["title_ko"])
@@ -240,7 +277,7 @@ def draw_page(c, spec, ctx):
         box = mm(ILLUST_BOX_MM)
         path = find_illustration(n, ctx.actions)
         if path:
-            im = Image.open(path).convert("L")  # 1도 인쇄: K 그레이스케일
+            im = load_illustration(path)  # 1도 인쇄: K 그레이스케일, 먹 영역 기준 크롭
             w, h = im.size
             s = min(box / w, box / h)
             dw, dh = w * s, h * s
@@ -278,10 +315,16 @@ def body_block(c, ctx, paragraphs, x0, y0, x1, y_top, placeholder, spec):
         c.setFont(FONT_REG, 8.5)
         c.drawString(x0, y_top - 8, placeholder)
         return
+    k100 = CMYKColor(*K100)  # Paragraph 기본 글자색은 RGB 검정이므로 K100 명시
     st = ParagraphStyle("body", fontName=FONT_REG, fontSize=9.5, leading=17, alignment=0, wordWrap=None,
-                        spaceAfter=8)
+                        spaceAfter=8, textColor=k100)
+    st_item = ParagraphStyle("item", parent=st, leftIndent=mm(6), bulletIndent=0, bulletFontName=FONT_REG,
+                             bulletFontSize=9.5, bulletColor=k100)
     frame = Frame(x0, y0, x1 - x0, y_top - y0, leftPadding=0, rightPadding=0, topPadding=0, bottomPadding=0)
-    story = [Paragraph(p, st) for p in paragraphs]
+    story = []
+    for p in paragraphs:
+        m = re.match(r"^(\d+\.)\s+(.*)$", p, re.S)  # "1. ..." 번호 목록은 내어쓰기
+        story.append(Paragraph(m.group(2), st_item, bulletText=m.group(1)) if m else Paragraph(p, st))
     frame.addFromList(story, c)
     if story:
         ctx.warnings.append(f"p.{spec['page']:03d}: 본문이 영역을 넘침 (잘린 문단 {len(story)}개)")
@@ -383,7 +426,8 @@ def render_review(plan, ctx, out):
 
 # ───────────────────────── 편집표 ─────────────────────────
 def write_tables(plan, ctx, outdir, bleed_mm):
-    hdr = ["PDF 쪽", "펼침면", "좌/우", "구간", "구성 요소", "사랑 행동 번호", "원고 상태", "줄 수"]
+    data = ctx.data
+    hdr = ["PDF 쪽", "펼침면", "좌/우", "구간", "구성 요소", "사랑 행동 번호", "원고 상태", "줄 수", "일러스트 파일"]
     rows = []
     for p in plan:
         pg = p["page"]
@@ -404,13 +448,24 @@ def write_tables(plan, ctx, outdir, bleed_mm):
             status = "플레이스홀더" if ph else "테스트 문장(임시)"
             lines = ctx.line_counts.get(n, "")
         elif p["kind"] == "action_art":
-            status = "일러스트 배치" if find_illustration(n, ctx.actions) else "일러스트 플레이스홀더"
+            ill = find_illustration(n, ctx.actions)
+            status = "일러스트 배치" if ill else "일러스트 플레이스홀더"
+            lines = ill.name if ill else ""
+        elif p["kind"] == "phrase":
+            status = "원고 반영" if data.get("phrase") else "플레이스홀더"
+        elif p["kind"] == "howto":
+            status = "원고 반영" if data["howto"]["body"] else "플레이스홀더"
+        elif p["kind"] == "intro":
+            status = "원고 반영" if data["intro"][p["index"]]["body"] else "플레이스홀더"
         elif p["kind"] == "title":
             status = "확정 정보(제목·엮은이)"
+        elif p["kind"] != "intro_open":
+            status = status or "플레이스홀더"
         else:
             status = "플레이스홀더"
+        is_img = p["kind"] == "action_art"
         rows.append([f"{pg:03d}", spread, "우" if p["side"] == "R" else "좌", p["section"], p["component"],
-                     f"{n:03d}" if n else "", status, lines])
+                     f"{n:03d}" if n else "", status, "" if is_img else lines, lines if is_img else ""])
     with open(outdir / "page-map.csv", "w", encoding="utf-8-sig", newline="") as f:
         w = csv.writer(f)
         w.writerow(hdr)
@@ -444,6 +499,7 @@ def main():
 
     data = json.load(open(ROOT / "data/book.json", encoding="utf-8"))
     actions = load_actions()
+    POOL_PLAN.update(make_pool_plan(len(actions), data.get("illustration_seed", 7)))
     plan = build_plan(data, len(actions))
     assert len(plan) % 4 == 0
     out = ROOT / "output"

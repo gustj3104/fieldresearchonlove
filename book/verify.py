@@ -96,6 +96,24 @@ for n in range(1, 101):
     action_art_pages[n] = has_art
 check(all(action_art_pages.values()), "사랑 행동 100개 모두 왼쪽(짝수) 페이지에 일러스트 상자/이미지 존재")
 
+# 새 원고 반영 확인
+check(norm(page_text[0]) == norm(data["phrase"]), "p.1 문구가 book.json 원문과 일치")
+if data["howto"]["body"]:
+    check(all(norm(re.sub(r"^\d+\.", "", it)) in norm(page_text[4]) for it in data["howto"]["body"]),
+          f"p.5 사용법 {len(data['howto']['body'])}개 항목 원문 일치")
+# 일러스트: 연속 쪽 동일 이미지 금지, 풀 이미지 고르게 사용
+import hashlib
+art_hash = []
+for n in range(1, 101):
+    pg = d[14 + 2 * (n - 1) - 1]
+    imgs = pg.get_images(full=True)
+    art_hash.append(hashlib.md5(d.extract_image(imgs[0][0])["image"]).hexdigest() if imgs else None)
+if all(art_hash):
+    from collections import Counter
+    cnt = Counter(art_hash)
+    check(all(a != b for a, b in zip(art_hash, art_hash[1:])), "연속한 사랑 행동 일러스트에 같은 이미지가 없음 (연속 중복 0)")
+    check(len(cnt) == len(list((ROOT / "illustrations/pool").glob("*.png"))), f"풀 이미지 {len(cnt)}종 모두 사용 (횟수 {sorted(cnt.values())})")
+
 # 빈 페이지 / 마지막 순서
 blank_pages = [2, 4, 215, 216]
 check(all(not page_text[p - 1].strip() and not d[p - 1].get_drawings() and not d[p - 1].get_images() for p in blank_pages),
